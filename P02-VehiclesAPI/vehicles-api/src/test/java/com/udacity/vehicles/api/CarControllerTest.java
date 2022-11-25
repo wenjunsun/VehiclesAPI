@@ -5,9 +5,7 @@ import static org.hamcrest.Matchers.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.times;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -144,6 +142,29 @@ public class CarControllerTest {
                         .accept(MediaType.APPLICATION_JSON_UTF8))
                 .andExpect(status().isNoContent());
         Mockito.verify(carService, times(1)).delete(id);
+    }
+
+    /**
+     * Tests the updating of a single car
+     */
+    @Test
+    public void updateCar() throws Exception {
+        Car carToUpdate = getCar();
+        Long id = 1L;
+        carToUpdate.setId(id);
+        String price = "10000 dollars";
+        carToUpdate.setPrice(price);
+        // now set our mock car service to return the updated car instead.
+        given(carService.save(any())).willReturn(carToUpdate);
+
+        mvc.perform(
+                put(new URI("/cars/"+ id))
+                        .content(json.write(carToUpdate).getJson())
+                        .contentType(MediaType.APPLICATION_JSON_UTF8)
+                        .accept(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(jsonPath("$.price", is(price))) // we expect to get the new updated price back.
+                .andExpect(status().isOk());
+        Mockito.verify(carService, times(1)).save(any(Car.class));
     }
 
     /**
