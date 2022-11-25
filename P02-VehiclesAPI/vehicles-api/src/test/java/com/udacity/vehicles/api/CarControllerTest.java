@@ -93,11 +93,18 @@ public class CarControllerTest {
      */
     @Test
     public void listCars() throws Exception {
+        Car car = getCar();
+        Long id = 1L;
+        car.setId(id);
+        String jsonBaseString = "$._embedded.carList[0]";
         mvc.perform(
                 get(new URI("/cars"))
                         .contentType(MediaType.APPLICATION_JSON_UTF8)
-                        .accept(MediaType.APPLICATION_JSON_UTF8)
-        ).andExpect(status().isOk());
+                        .accept(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$._embedded.carList.size()", is(1))) // we only expect one element in car list.
+                .andExpect(jsonPath(jsonBaseString + ".details.model", is(car.getDetails().getModel())))
+                .andExpect(jsonPath(jsonBaseString + ".details.engine", is(car.getDetails().getEngine())));
 
         Mockito.verify(carService, times(1)).list();
     }
@@ -111,13 +118,14 @@ public class CarControllerTest {
         Car car = getCar();
         Long id = 1L;
         car.setId(id);
-
+        String jsonBaseString = "$";
         mvc.perform(
                 get(new URI("/cars/" + id))
                         .contentType(MediaType.APPLICATION_JSON_UTF8)
-                        .accept(MediaType.APPLICATION_JSON_UTF8)
-        ).andExpect(status().isOk())
-                .andExpect(content().json(json.write(car).getJson()));
+                        .accept(MediaType.APPLICATION_JSON_UTF8))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(jsonBaseString + ".details.model", is(car.getDetails().getModel())))
+                .andExpect(jsonPath(jsonBaseString + ".details.engine", is(car.getDetails().getEngine())));
 
         Mockito.verify(carService, times(1)).findById(id);
     }
