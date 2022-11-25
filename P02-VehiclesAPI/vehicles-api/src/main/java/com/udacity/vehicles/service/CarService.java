@@ -1,7 +1,7 @@
 package com.udacity.vehicles.service;
 
-import com.udacity.vehicles.client.maps.Address;
-import com.udacity.vehicles.client.prices.Price;
+import com.udacity.vehicles.client.maps.MapsClient;
+import com.udacity.vehicles.client.prices.PriceClient;
 import com.udacity.vehicles.domain.Location;
 import com.udacity.vehicles.domain.car.Car;
 import com.udacity.vehicles.domain.car.CarRepository;
@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 /**
  * Implements the car service create, read, update or delete
@@ -21,13 +19,13 @@ import reactor.core.publisher.Mono;
 public class CarService {
 
     private final CarRepository repository;
-    private final WebClient webClientMaps;
-    private final WebClient webClientPricing;
+    private final MapsClient webClientMaps; // turns out we can directly use MapsClient! this is autowired by Spring.
+    private final PriceClient webClientPricing;
 
-    public CarService(CarRepository repository, WebClient maps, WebClient pricing) {
+    public CarService(CarRepository repository, MapsClient mapsClient, PriceClient priceClient) {
         this.repository = repository;
-        this.webClientMaps = maps;
-        this.webClientPricing = pricing;
+        this.webClientMaps = mapsClient;
+        this.webClientPricing = priceClient;
     }
 
     /**
@@ -52,34 +50,11 @@ public class CarService {
             car = carOptional.get();
         }
 
-        /**
-         * TODO: Use the Pricing Web client you create in `VehiclesApiApplication`
-         *   to get the price based on the `id` input'
-         * TODO: Set the price of the car
-         * Note: The car class file uses @transient, meaning you will need to call
-         *   the pricing service each time to get the price.
-         */
-        Mono<Price> priceRestResult = webClientPricing.get().uri("/prices/" + id).retrieve().bodyToMono(Price.class);
-        Price price = priceRestResult.block(); // wait until we get a price from pricing API.
-        assert price != null;
-        car.setPrice(price.getPrice() + price.getCurrency());
+        String price = webClientPricing.getPrice(id);
+        car.setPrice(price);
 
-        /**
-         * TODO: Use the Maps Web client you create in `VehiclesApiApplication`
-         *   to get the address for the vehicle. You should access the location
-         *   from the car object and feed it to the Maps service.
-         * TODO: Set the location of the vehicle, including the address information
-         * Note: The Location class file also uses @transient for the address,
-         * meaning the Maps service needs to be called each time for the address.
-         */
-        Location carLocation = car.getLocation();
-        Double lat = carLocation.getLat();
-        Double lon = carLocation.getLon();
-        Mono<Address> addressRestResult = webClientMaps.get().uri("/maps?lat=" + lat + "&lon=" + lon).retrieve().bodyToMono(Address.class);
-        Address address = addressRestResult.block();
-        assert address != null;
-        carLocation.setAddress(address.getAddress());
-        car.setLocation(carLocation);
+        Location location = webClientMaps.getAddress(car.getLocation());
+        car.setLocation(location);
 
         return car;
     }
